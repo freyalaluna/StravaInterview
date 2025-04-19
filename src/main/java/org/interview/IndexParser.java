@@ -1,10 +1,6 @@
 package org.interview;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -12,15 +8,8 @@ import java.util.*;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-public class Main {
-    /*
-        display the top 5 largest indexes by size with their name and size in human readable format (GBs, not bytes)
-        display the top 5 largest indexes by shard count with their name
-        An index should have 1 shard for every 30 GB of data it stores.
-        Some indexes are storing WAY too much data for their shard count.
-        Find the top 5 biggest offenders and offer a new shard count recommendation.
-        (For example, an index with 2,000 GB and 20 shards has a “ratio” of 100. Ideally, this index should have at least 67 shards allocated.)
-     */
+public class IndexParser {
+
     public static void main(String[] args) {
         String dataFile = "src/main/resources/input.json";
 
@@ -29,25 +18,32 @@ public class Main {
         boolean debug = false;
         int days = 7;
 
+        // Flag handling
         for(int i = 0; i < args.length; i++) {
-            if (args[i].equals("--debug")) {
-                debug = true;
-            } else if (args[i].equals("--endpoint")) {
-                if (i+1 < args.length) {
-                    endpoint = args[++i];
-                }
-            } else if (args[i].equals("--days")){
-                if (i+1 < args.length) {
-                    try {
-
-                        days = Integer.parseInt(args[++i]);
-                    } catch (NumberFormatException e) {
-                        System.err.println(e);
+            switch (args[i]) {
+                case "--debug" -> debug = true;
+                case "--endpoint" -> {
+                    if (i + 1 < args.length) {
+                        endpoint = args[++i];
+                    } else {
+                        System.err.println("--endpoint must be supplied with a URI");
                         System.exit(1);
                     }
                 }
-            } else {
-                System.err.println("Error: unrecognized argument: " + args[i]);
+                case "--days" -> {
+                    if (i + 1 < args.length) {
+                        try {
+                            days = Integer.parseInt(args[++i]);
+                        } catch (NumberFormatException e) {
+                            System.err.println(e);
+                            System.exit(1);
+                        }
+                    } else {
+                        System.err.println("--days must be supplied with an integer");
+                        System.exit(1);
+                    }
+                }
+                default -> System.err.println("Error: unrecognized argument: " + args[i]);
             }
         }
 
@@ -69,20 +65,21 @@ public class Main {
         printLeastBalanced(data);
     }
 
+    // Extracts the JSON contents of the test file as a String, and converts it to a List<IndexInfo>
     public static List<IndexInfo> getDataFromFile(String inputFile) throws Exception {
         String fileJson = Files.readString(Paths.get(inputFile).toAbsolutePath());
         return parseIndexList(fileJson);
     }
 
-    /*
-       You'll need to build a query string containing year, month, day.
-       Each API call should request 1 day worth of data (e.g. if today is April 15, 2025, the parameters would be year 2025, month 04, day 14).
-       Query string is in the form of "https://<ENDPOINT>/_cat/indices/*<YEAR>*<MONTH>*<DAY>?v&h=index,pri.store.size,pri&format=json&bytes=b"
-    */
+    // Queries the given endpoint for the past n days, where n = the days argument, and returns the list of all indices as IndexInfo objects.
+    // Each API call should request 1 day worth of data (e.g. if today is April 15, 2025, the parameters would be year 2025, month 04, day 14).
+    // Query string is in the form of "https://<ENDPOINT>/_cat/indices/*<YEAR>*<MONTH>*<DAY>?v&h=index,pri.store.size,pri&format=json&bytes=b"
     public static List<IndexInfo> getDataFromServer(String endpoint, int days) throws IOException, InterruptedException {
         String urlBase = "https://" + endpoint + "/_cat/indicies/";
         String urlQueryParams = "?v&h=index,pri.store.size,pri&format=json&bytes=b";
 
+        // A GregorianCalendar is used to keep track of the current year/month/day being requested,
+        // and handles edge cases like months/years rolling over during repeated requests
         Calendar calendar = Calendar.getInstance();
         GregorianCalendar gc = (GregorianCalendar) calendar;
 
@@ -91,12 +88,14 @@ public class Main {
         for (int i = 0; i < days; i++) {
             int year = gc.get(Calendar.YEAR);
             int month = gc.get(Calendar.MONTH)+1;
-            int day = gc.get(Calendar.DAY_OF_MONTH);
+            int day = gc.get(Calendar.DAY_OF_MONTH)-1;
 
             String urlString = urlBase + "*" + year + "*" + month + "*" + day + urlQueryParams;
             client.setUrl(urlString);
             String endpointIndices = client.getIndices();
 
+            // Converts the JSON string into a List<InfoIndex>,
+            // which is concatenated to our running collection
             serverInfoIndices.addAll(parseIndexList(endpointIndices));
 
             gc.add(Calendar.DATE, -1);
@@ -105,13 +104,15 @@ public class Main {
         return serverInfoIndices;
     }
 
+
+    // A helper function that uses the Gson library to convert the incoming JSON array string into a List of IndexInfo objects
     public static List<IndexInfo> parseIndexList(String jsonSource) {
         Gson gson = new GsonBuilder().create();
-        System.out.println(jsonSource);
         IndexInfo[] indexArray = gson.fromJson(jsonSource, IndexInfo[].class);
         return new ArrayList<>(Arrays.asList(indexArray));
     }
 
+    //Collects and prints the five indexes holding the largest amounts of data
     public static void printLargestIndexes(List<IndexInfo> data) {
         System.out.println("Printing largest indexes by storage size");
         int largestIndexesToPrint = 5;
@@ -131,6 +132,7 @@ public class Main {
         System.out.println();
     }
 
+    // Collects and prints the five indexes with the most shards
     public static void printMostShards(List<IndexInfo> data) {
         System.out.println("Printing largest indexes by shard count");
         int mostShardsToPrint = 5;
@@ -148,21 +150,27 @@ public class Main {
         System.out.println();
     }
 
+    // Collects and prints the five indexes with the highest Data/Shard ratio
     public static void printLeastBalanced(List<IndexInfo> data) {
         int leastBalancedToPrint = 5;
 
-        PriorityQueue<IndexInfo> largestIndexes = new PriorityQueue<IndexInfo>(
+        PriorityQueue<IndexInfo> highestRatio = new PriorityQueue<IndexInfo>(
                 Comparator.comparingDouble(index -> index.convertBytesToGB()/index.pri));
 
-        Stack<IndexInfo> stack = getLargest(largestIndexes, data, leastBalancedToPrint);
+        Stack<IndexInfo> stack = getLargest(highestRatio, data, leastBalancedToPrint);
 
+        int recommendedShardSize = 30;
         while(!stack.isEmpty()) {
             IndexInfo topIndex = stack.pop();
 
-            //TODO: Find a more elegant way to handle ratio rounding
+            // Ratios are handled by ignoring the decimal part of the resulting value
             double sizeInGB = topIndex.convertBytesToGB();
-            int currentShardRatio = (int) Math.ceil(sizeInGB/topIndex.pri);
-            int recommendedShardRatio = (int) Math.ceil(sizeInGB / 30);
+            int currentShardRatio = (int) (sizeInGB/topIndex.pri);
+            int recommendedShardRatio = (int) (sizeInGB / recommendedShardSize);
+
+            // If an index is smaller than the recommended shard size
+            // it should still be afforded 1 shard
+            recommendedShardRatio = Math.max(recommendedShardRatio, 1);
 
             System.out.println("Index: " + topIndex.indexName);
             System.out.printf("Size: %.2f GB\n", sizeInGB);
@@ -174,6 +182,9 @@ public class Main {
         System.out.println();
     }
 
+    // A helper function to handle sorting using a Priority Queue
+    // Returns the top elements in a stack to ensure proper ordering
+    // from largest to smallest
     public static Stack<IndexInfo> getLargest(PriorityQueue<IndexInfo> queue, List<IndexInfo> data, int size) {
         for(IndexInfo i : data) {
             queue.add(i);
@@ -190,6 +201,5 @@ public class Main {
         }
 
         return stack;
-
     }
 }

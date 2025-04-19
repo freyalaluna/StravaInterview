@@ -23,6 +23,7 @@ public class IndexClient {
         url = aUrl;
     }
 
+    // Creates an HTTP GET request for its endpoint, and returns the response
     public String getIndices() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))

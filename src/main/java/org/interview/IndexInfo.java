@@ -7,13 +7,15 @@ public class IndexInfo {
         indexName = aIndexName;
         priStoreSize = aPriStoreSize;
         pri = aPri;
-
     }
 
+    //Used for easy conversion between data sizes
+    //Uses SI standard for byte size (1000 bytes per kilobyte)
     public double convertBytesToGB(){
         return (double)(priStoreSize / Math.pow(1000, 3));
     }
 
+    //Getters
     public String getIndexName() {
         return indexName;
     }
@@ -24,6 +26,7 @@ public class IndexInfo {
         return pri;
     }
 
+    //Setters
     public void setIndexName(String aIndexName) {
         indexName = aIndexName;
     }
@@ -33,7 +36,6 @@ public class IndexInfo {
     public void setPri(int aPri) {
         pri = aPri;
     }
-
 
     @SerializedName("index")
     String indexName;

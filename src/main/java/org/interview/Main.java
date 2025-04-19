@@ -1,5 +1,10 @@
 package org.interview;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -34,7 +39,8 @@ public class Main {
             } else if (args[i].equals("--days")){
                 if (i+1 < args.length) {
                     try {
-                        days = Integer.parseInt(args[i++]);
+
+                        days = Integer.parseInt(args[++i]);
                     } catch (NumberFormatException e) {
                         System.err.println(e);
                         System.exit(1);
@@ -44,11 +50,6 @@ public class Main {
                 System.err.println("Error: unrecognized argument: " + args[i]);
             }
         }
-
-        /*
-            You'll need to build a query string containing year, month, day. Each API call should request 1 day worth of data (e.g. if today is April 15, 2025, the parameters would be year 2025, month 04, day 14).
-            Query string is in the form of "https://<ENDPOINT>/_cat/indices/*<YEAR>*<MONTH>*<DAY>?v&h=index,pri.store.size,pri&format=json&bytes=b"
-        */
 
         List<IndexInfo> data = null;
         try {
@@ -63,12 +64,6 @@ public class Main {
             System.exit(1);
         }
 
-//        for(IndexInfo i : data) {
-//            System.out.println("Index: " + i.indexName);
-//            System.out.println("priStoreSize: " + i.priStoreSize);
-//            System.out.println("pri: " + i.pri);
-//        }
-
         printLargestIndexes(data);
         printMostShards(data);
         printLeastBalanced(data);
@@ -79,13 +74,40 @@ public class Main {
         return parseIndexList(fileJson);
     }
 
-    public static List<IndexInfo> getDataFromServer(String endpoint, int days) {
-        List<IndexInfo> indexList = null;
-        return indexList;
+    /*
+       You'll need to build a query string containing year, month, day.
+       Each API call should request 1 day worth of data (e.g. if today is April 15, 2025, the parameters would be year 2025, month 04, day 14).
+       Query string is in the form of "https://<ENDPOINT>/_cat/indices/*<YEAR>*<MONTH>*<DAY>?v&h=index,pri.store.size,pri&format=json&bytes=b"
+    */
+    public static List<IndexInfo> getDataFromServer(String endpoint, int days) throws IOException, InterruptedException {
+        String urlBase = "https://" + endpoint + "/_cat/indicies/";
+        String urlQueryParams = "?v&h=index,pri.store.size,pri&format=json&bytes=b";
+
+        Calendar calendar = Calendar.getInstance();
+        GregorianCalendar gc = (GregorianCalendar) calendar;
+
+        IndexClient client = new IndexClient(urlBase);
+        List<IndexInfo> serverInfoIndices = new ArrayList<>();
+        for (int i = 0; i < days; i++) {
+            int year = gc.get(Calendar.YEAR);
+            int month = gc.get(Calendar.MONTH)+1;
+            int day = gc.get(Calendar.DAY_OF_MONTH);
+
+            String urlString = urlBase + "*" + year + "*" + month + "*" + day + urlQueryParams;
+            client.setUrl(urlString);
+            String endpointIndices = client.getIndices();
+
+            serverInfoIndices.addAll(parseIndexList(endpointIndices));
+
+            gc.add(Calendar.DATE, -1);
+        }
+
+        return serverInfoIndices;
     }
 
     public static List<IndexInfo> parseIndexList(String jsonSource) {
         Gson gson = new GsonBuilder().create();
+        System.out.println(jsonSource);
         IndexInfo[] indexArray = gson.fromJson(jsonSource, IndexInfo[].class);
         return new ArrayList<>(Arrays.asList(indexArray));
     }

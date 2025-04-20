@@ -11,6 +11,9 @@ java -jar ./IndexParser.jar
 ```
 in the terminal alongside the necessary flags, which are described below. 
 
+<br/>
+
+This program is made in Java 23. Attempting to run this with older versions of the Java Runtime may result in errors.
 ## Arguments
 ### --debug
 `--debug` will cause the program to read from a static JSON file found in `/src/main/resources/input.json`. All other flags will be ignored if this is provided.

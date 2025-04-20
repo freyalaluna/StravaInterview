@@ -3,6 +3,12 @@ package org.interview;
 import com.google.gson.annotations.SerializedName;
 
 public class IndexInfo {
+    @SerializedName("index")
+    private String indexName;
+    @SerializedName("pri.store.size")
+    private long priStoreSize;
+    private int pri;
+
     IndexInfo(String aIndexName, long aPriStoreSize, int aPri){
         indexName = aIndexName;
         priStoreSize = aPriStoreSize;
@@ -36,10 +42,4 @@ public class IndexInfo {
     public void setPri(int aPri) {
         pri = aPri;
     }
-
-    @SerializedName("index")
-    String indexName;
-    @SerializedName("pri.store.size")
-    long priStoreSize;
-    int pri;
 }

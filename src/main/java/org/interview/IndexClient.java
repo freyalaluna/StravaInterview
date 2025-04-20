@@ -7,7 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 public class IndexClient {
-    public String url;
+    private String url;
     private final HttpClient client;
 
     public IndexClient(String aUrl) {

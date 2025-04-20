@@ -24,9 +24,9 @@ class IndexClientTest {
         List<IndexInfo> infoList = new ArrayList<>(Arrays.asList(infoArray));
 
         for(IndexInfo info : infoList) {
-            System.out.println(info.indexName);
-            System.out.println(info.pri);
-            System.out.println(info.priStoreSize);
+            System.out.println(info.getIndexName());
+            System.out.println(info.getPri());
+            System.out.println(info.getPriStoreSize());
         }
     }
 
@@ -42,9 +42,9 @@ class IndexClientTest {
 
         assertEquals(10, infoList.size());
         for(IndexInfo info : infoList) {
-            System.out.println(info.indexName);
-            System.out.println(info.pri);
-            System.out.println(info.priStoreSize);
+            System.out.println(info.getIndexName());
+            System.out.println(info.getPri());
+            System.out.println(info.getPriStoreSize());
         }
     }
 }

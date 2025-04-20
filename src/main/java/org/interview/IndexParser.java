@@ -118,7 +118,7 @@ public class IndexParser {
         int largestIndexesToPrint = 5;
 
         PriorityQueue<IndexInfo> largestIndexes = new PriorityQueue<IndexInfo>(
-                Comparator.comparingLong(index -> index.priStoreSize));
+                Comparator.comparingLong(IndexInfo::getPriStoreSize));
 
         Stack<IndexInfo> stack = getLargest(largestIndexes, data, largestIndexesToPrint);
         while(!stack.isEmpty()) {
@@ -126,7 +126,7 @@ public class IndexParser {
 
             double sizeInGB = topIndex.convertBytesToGB();
 
-            System.out.println("Index: " + topIndex.indexName);
+            System.out.println("Index: " + topIndex.getIndexName());
             System.out.printf("Size: %.2f GB\n", sizeInGB);
         }
         System.out.println();
@@ -137,25 +137,26 @@ public class IndexParser {
         System.out.println("Printing largest indexes by shard count");
         int mostShardsToPrint = 5;
 
-        PriorityQueue<IndexInfo> largestIndexes = new PriorityQueue<IndexInfo>(
-                Comparator.comparingInt(index -> index.pri));
+        PriorityQueue<IndexInfo> mostShards = new PriorityQueue<IndexInfo>(
+                Comparator.comparingInt(IndexInfo::getPri));
 
-        Stack<IndexInfo> stack = getLargest(largestIndexes, data, mostShardsToPrint);
+        Stack<IndexInfo> stack = getLargest(mostShards, data, mostShardsToPrint);
         while(!stack.isEmpty()) {
             IndexInfo topIndex = stack.pop();
 
-            System.out.println("Index: " + topIndex.indexName);
-            System.out.println("Shards: " + topIndex.pri);
+            System.out.println("Index: " + topIndex.getIndexName());
+            System.out.println("Shards: " + topIndex.getPri());
         }
         System.out.println();
     }
 
     // Collects and prints the five indexes with the highest Data/Shard ratio
     public static void printLeastBalanced(List<IndexInfo> data) {
+        System.out.println("Printing least balanced indexes");
         int leastBalancedToPrint = 5;
 
         PriorityQueue<IndexInfo> highestRatio = new PriorityQueue<IndexInfo>(
-                Comparator.comparingDouble(index -> index.convertBytesToGB()/index.pri));
+                Comparator.comparingDouble(index -> index.convertBytesToGB()/index.getPri()));
 
         Stack<IndexInfo> stack = getLargest(highestRatio, data, leastBalancedToPrint);
 
@@ -165,16 +166,16 @@ public class IndexParser {
 
             // Ratios are handled by ignoring the decimal part of the resulting value
             double sizeInGB = topIndex.convertBytesToGB();
-            int currentShardRatio = (int) (sizeInGB/topIndex.pri);
+            int currentShardRatio = (int) (sizeInGB/topIndex.getPri());
             int recommendedShardRatio = (int) (sizeInGB / recommendedShardSize);
 
             // If an index is smaller than the recommended shard size
             // it should still be afforded 1 shard
             recommendedShardRatio = Math.max(recommendedShardRatio, 1);
 
-            System.out.println("Index: " + topIndex.indexName);
+            System.out.println("Index: " + topIndex.getIndexName());
             System.out.printf("Size: %.2f GB\n", sizeInGB);
-            System.out.println("Shards: " + topIndex.pri);
+            System.out.println("Shards: " + topIndex.getPri());
             System.out.println("Balance Ratio: " + currentShardRatio);
             System.out.println("Recommended Shard count is " + recommendedShardRatio);
 
